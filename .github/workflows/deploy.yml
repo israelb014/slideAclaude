@@ -26,6 +26,10 @@ jobs:
 
       - name: Configure Pages
         uses: actions/configure-pages@v5
+        with:
+          # Creates the Pages site (build_type: workflow) on the first run using
+          # the job's `pages: write` token, so no manual enablement is needed.
+          enablement: true
 
       - name: Upload site
         uses: actions/upload-pages-artifact@v3
