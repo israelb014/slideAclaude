@@ -1,0 +1,309 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>בדיקות — סלייד-א-לאמה</title>
+<style>
+  body { margin: 0; padding: 20px; background: #150a24; color: #f7ead7;
+         font-family: "Rubik", "Heebo", "Arial Hebrew", system-ui, sans-serif; }
+  h1 { font-size: 22px; color: #ffd77a; margin: 0 0 4px; }
+  p.sub { color: #c9b3c6; font-size: 14px; margin: 0 0 18px; }
+  #summary { font-size: 18px; font-weight: 800; padding: 12px 16px; border-radius: 12px; margin-bottom: 16px; }
+  #summary.pass { background: rgba(95,184,74,.16); border: 1.5px solid #5fb84a; color: #a6e390; }
+  #summary.fail { background: rgba(228,64,95,.16); border: 1.5px solid #e4405f; color: #ff8a9d; }
+  ol { padding-inline-start: 24px; margin: 0; }
+  li { margin-bottom: 6px; font-size: 14.5px; line-height: 1.5; }
+  li.ok::marker { color: #5fb84a; }
+  li.bad { color: #ff8a9d; }
+  li.bad::marker { color: #e4405f; }
+  code { direction: ltr; unicode-bidi: embed; display: inline-block; background: rgba(0,0,0,.35);
+         padding: 1px 6px; border-radius: 5px; font-size: 12.5px; color: #ffd77a; }
+  .detail { display: block; color: #c9b3c6; font-size: 12.5px; direction: ltr; text-align: left; }
+  a { color: #ffd77a; }
+</style>
+</head>
+<body>
+<h1>בדיקות לוגיקה — סלייד-א-לאמה</h1>
+<p class="sub">בדיקות על <code>js/game.js</code> בלבד (ללא DOM). התוצאות מודפסות גם לקונסולה. <a href="index.html">חזרה למשחק</a></p>
+<div id="summary">מריץ…</div>
+<ol id="results"></ol>
+
+<script src="js/game.js"></script>
+<script>
+(function () {
+  'use strict';
+  var G = window.SAL.Game;
+  var results = [];
+
+  function check(name, fn) {
+    try {
+      fn();
+      results.push({ name: name, ok: true });
+      console.log('%c PASS ', 'background:#2c7a22;color:#fff', name);
+    } catch (err) {
+      results.push({ name: name, ok: false, detail: err && err.message });
+      console.error('FAIL:', name, '\n ', err && err.message);
+    }
+  }
+
+  function eq(actual, expected, what) {
+    var a = JSON.stringify(actual), b = JSON.stringify(expected);
+    if (a !== b) throw new Error((what || 'value') + ': got ' + a + ', expected ' + b);
+  }
+  function ok(cond, what) { if (!cond) throw new Error(what || 'expected truthy'); }
+
+  var T = { B: '0', C: '1', A: '2', G: '3', L: '4', D: '5' };
+  function move(side, index) { return { side: side, index: index }; }
+  function tile(t) { return G.makeTile(t); }
+
+  /* ---------------------------------------------------------- 1. board -- */
+
+  check('לוח חדש הוא 5×5 ריק', function () {
+    var b = G.emptyBoard();
+    eq(G.toTypes(b), ['.....', '.....', '.....', '.....', '.....']);
+    ok(G.isEmpty(b), 'board should report empty');
+  });
+
+  /* -------------------------------------------------- 2-4. top insertion -- */
+
+  check('הכנסה מלמעלה נופלת לתחתית טור ריק', function () {
+    var res = G.applyInsert(G.emptyBoard(), tile(0), move('top', 2));
+    eq(G.toTypes(res.board), ['.....', '.....', '.....', '.....', '..0..']);
+    eq(res.crushed.length, 0, 'crushed count');
+  });
+
+  check('הכנסה מלמעלה נערמת מעל אריחים קיימים', function () {
+    var b = G.fromTypes(['.....', '.....', '.....', '..1..', '..0..']);
+    var res = G.applyInsert(b, tile(2), move('top', 2));
+    eq(G.toTypes(res.board), ['.....', '.....', '..2..', '..1..', '..0..']);
+  });
+
+  check('טור מלא: האריח התחתון נמחץ והטור יורד', function () {
+    var b = G.fromTypes(['..0..', '..1..', '..2..', '..3..', '..4..']);
+    var res = G.applyInsert(b, tile(5), move('top', 2));
+    eq(G.toTypes(res.board), ['..5..', '..0..', '..1..', '..2..', '..3..'], 'column shifted down');
+    eq(res.crushed.length, 1, 'one tile crushed');
+    eq(res.crushed[0].tile.t, 4, 'the bottom tile (4) is the one crushed');
+  });
+
+  /* ------------------------------------------- 5-7. horizontal insertion -- */
+
+  check('הכנסה משמאל דוחפת את השורה ימינה', function () {
+    var b = G.fromTypes(['.....', '.....', '.....', '.....', '01...']);
+    var res = G.applyInsert(b, tile(2), move('left', 4));
+    eq(G.toTypes(res.board), ['.....', '.....', '.....', '.....', '201..']);
+    eq(res.crushed.length, 0, 'nothing pushed out of a non-full row');
+  });
+
+  check('שורה מלאה משמאל: האריח הימני נדחף החוצה', function () {
+    var b = G.fromTypes(['.....', '.....', '.....', '.....', '01234']);
+    var res = G.applyInsert(b, tile(5), move('left', 4));
+    eq(G.toTypes(res.board), ['.....', '.....', '.....', '.....', '50123']);
+    eq(res.crushed.length, 1, 'one tile pushed out');
+    eq(res.crushed[0].tile.t, 4, 'the rightmost tile leaves');
+  });
+
+  check('הכנסה מימין דוחפת שמאלה ומוציאה את האריח השמאלי', function () {
+    var b = G.fromTypes(['.....', '.....', '.....', '.....', '01234']);
+    var res = G.applyInsert(b, tile(5), move('right', 4));
+    eq(G.toTypes(res.board), ['.....', '.....', '.....', '.....', '12345']);
+    eq(res.crushed[0].tile.t, 0, 'the leftmost tile leaves');
+  });
+
+  /* -------------------------------------------------------- 8. gravity -- */
+
+  check('כבידה מפילה אריחים תלויים לתחתית הטור', function () {
+    var b = G.fromTypes(['0....', '1....', '.....', '....2', '.....']);
+    var g = G.applyGravity(b);
+    eq(G.toTypes(g.board), ['.....', '.....', '.....', '0....', '1...2']);
+    eq(g.moves.length, 3, 'three tiles moved');
+  });
+
+  check('דחיפה אופקית מעל חלל — הכבידה מסדרת אחריה', function () {
+    var b = G.fromTypes(['.....', '.....', '.....', '0....', '00...']);
+    var res = G.applyInsert(b, tile(1), move('left', 3));
+    eq(G.toTypes(res.board), ['.....', '.....', '.....', '10...', '00...'], 'row pushed right');
+    var g = G.applyGravity(res.board);
+    eq(G.toTypes(g.board), ['.....', '.....', '.....', '10...', '00...'], 'already settled');
+  });
+
+  /* --------------------------------------------------- 10-11. matching -- */
+
+  check('זיהוי רצפים אופקיים ואנכיים של 3+', function () {
+    var b = G.fromTypes(['.....', '.....', '...2.', '...2.', '11122']);
+    var runs = G.findRuns(b);
+    eq(runs.length, 2, 'one horizontal + one vertical run');
+    var h = runs.filter(function (r) { return r.dir === 'h'; })[0];
+    var v = runs.filter(function (r) { return r.dir === 'v'; })[0];
+    eq(h.cells.length, 3, 'horizontal run length');
+    eq(v.cells.length, 3, 'vertical run length');
+    eq(v.t, 2, 'vertical run is apples');
+  });
+
+  check('שני אריחים זהים אינם רצף', function () {
+    var b = G.fromTypes(['.....', '.....', '.....', '.....', '11...']);
+    eq(G.findRuns(b).length, 0, 'runs found');
+  });
+
+  /* ----------------------------------------------------- 12. multipliers -- */
+
+  check('מכפילי אורך: 3=×1, 4=×1.5, 5=×2', function () {
+    eq(G.lengthMultiplier(3), 1);
+    eq(G.lengthMultiplier(4), 1.5);
+    eq(G.lengthMultiplier(5), 2);
+
+    var three = G.fromTypes(['.....', '.....', '.....', '.....', '000..']);
+    eq(G.resolveMatches(three, null).points, 30, '3 bananas');
+
+    var four = G.fromTypes(['.....', '.....', '.....', '.....', '1111.']);
+    eq(G.resolveMatches(four, null).points, 90, '4 cherries = floor(60*1.5)');
+
+    var five = G.fromTypes(['.....', '.....', '.....', '.....', '00000']);
+    eq(G.resolveMatches(five, null).points, 100, '5 bananas = floor(50*2)');
+  });
+
+  /* -------------------------------------------------------- 13. cascade -- */
+
+  check('קסקדה: הרצף השני שווה פי 2', function () {
+    /* Cherry pushed into the (full) row 3 from the left: the pushed-out tile
+       lets a banana row complete, and the tiles that drop into the hole form a
+       second, doubled match. */
+    var b = G.fromTypes([
+      '2....',
+      '0320.',
+      '51031',
+      '00243',
+      '22022'
+    ]);
+    var res = G.applyMove(b, tile(1), move('left', 3));
+    var matchSteps = res.steps.filter(function (s) { return s.type === 'match'; });
+    eq(matchSteps.length, 2, 'number of match passes');
+    eq(matchSteps[0].cascade, 1, 'first pass is cascade 1');
+    eq(matchSteps[1].cascade, 2, 'second pass is cascade 2');
+    eq(matchSteps[0].points, matchSteps[0].base, 'cascade 1 is unmultiplied');
+    eq(matchSteps[1].points, matchSteps[1].base * 2, 'cascade 2 doubles its base');
+    eq([matchSteps[0].points, matchSteps[1].points], [30, 400], 'concrete cascade values');
+    eq(res.points, 430, 'total for the move');
+    eq(res.crushed.length, 1, 'the full row pushed one tile out');
+    eq(G.toTypes(res.board), ['.....', '2....', '03.0.', '51.31', '10.24'], 'settled board');
+  });
+
+  check('הלוח יציב בסוף מהלך — אין רצפים שנשארו', function () {
+    var b = G.fromTypes(['.....', '.....', '.....', '.....', '.111.']);
+    var res = G.applyMove(b, tile(1), move('top', 0));
+    eq(G.findRuns(res.board).length, 0, 'no runs remain after resolution');
+    ok(res.points > 0, 'the completed run scored');
+  });
+
+  /* ---------------------------------------------------------- 15. lamas -- */
+
+  check('חישוב לאמות: 5 בהתחלה, לאמה לכל 60 נקודות יתרון', function () {
+    eq(G.lamasForP1(0, 0), 5, 'even game');
+    eq(G.lamasForP1(59, 0), 5, 'lead below the threshold');
+    eq(G.lamasForP1(60, 0), 6, 'one full lead step');
+    eq(G.lamasForP1(0, 60), 4, 'trailing by one step');
+    eq(G.lamasForP1(180, 0), 8, 'three steps');
+    eq(G.lamasForP1(10000, 0), 10, 'clamped at ten');
+    eq(G.lamasForP1(0, 10000), 0, 'clamped at zero');
+  });
+
+  check('לאמות חוזרות אחורה כשהיתרון מצטמצם', function () {
+    eq(G.lamasForP1(300, 0), 10, 'p1 far ahead');
+    eq(G.lamasForP1(300, 120), 8, 'lead shrank to 180 -> 8 lamas');
+    eq(G.lamasForP1(300, 300), 5, 'back to even');
+  });
+
+  /* --------------------------------------------------- 17. win condition -- */
+
+  check('ניצחון כשכל עשר הלאמות בצד אחד', function () {
+    var s = G.createState({ seed: 5, mode: 'hotseat' });
+    s.scores = [299, 0];
+    s.board = G.fromTypes(['.....', '.....', '.....', '.....', '.555.']);
+    s.nextTile = G.makeTile(5);
+    var res = G.playMove(s, move('top', 0));
+    ok(res.points >= 180, 'three gems score at least 180, got ' + res.points);
+    eq(s.lamas, 10, 'all lamas crossed');
+    ok(s.over, 'game should be over');
+    eq(s.winner, 0, 'player 1 wins');
+    eq(s.reason, 'lamas', 'win reason');
+  });
+
+  check('רשת ביטחון: אחרי 200 תורות מנצח בעל הניקוד הגבוה', function () {
+    var s = G.createState({ seed: 9, mode: 'hotseat' });
+    s.turn = G.MAX_TURNS;
+    s.scores = [120, 100];
+    s.nextTile = G.makeTile(0);
+    G.playMove(s, move('top', 0));
+    ok(s.over, 'game ends at the turn cap');
+    eq(s.reason, 'turns', 'reason');
+    eq(s.winner, 0, 'higher score wins');
+  });
+
+  /* ----------------------------------------------------------- 19. misc -- */
+
+  check('תמיד יש 15 נקודות כניסה חוקיות', function () {
+    eq(G.legalMoves().length, 15, 'move count');
+    var full = G.fromTypes(['01234', '01234', '01234', '01234', '01234']);
+    eq(G.legalMoves().length, 15, 'a full board still offers every entry');
+    var res = G.applyMove(full, tile(5), move('right', 0));
+    ok(res.crushed.length === 1, 'a full row still accepts a tile by pushing one out');
+  });
+
+  check('התור עובר ליריב ואריח חדש נשלף', function () {
+    var s = G.createState({ seed: 11, mode: 'hotseat' });
+    var first = s.nextTile;
+    eq(s.current, 0, 'player 1 starts');
+    G.playMove(s, move('top', 0));
+    eq(s.current, 1, 'turn passed');
+    eq(s.turn, 2, 'turn counter advanced');
+    ok(s.nextTile !== first, 'a fresh tile was drawn');
+  });
+
+  check('סימולציה לא משנה את הלוח המקורי', function () {
+    var b = G.fromTypes(['.....', '.....', '.....', '.....', '.111.']);
+    var before = G.toTypes(b);
+    G.simulate(b, tile(1), move('left', 4));
+    G.applyMove(b, tile(1), move('top', 0));
+    eq(G.toTypes(b), before, 'source board untouched');
+  });
+
+  check('אותו זרע מייצר את אותו רצף אריחים', function () {
+    var a = G.createState({ seed: 1234 });
+    var c = G.createState({ seed: 1234 });
+    var seqA = [], seqC = [];
+    for (var i = 0; i < 20; i++) {
+      seqA.push(G.pickTileType(a.rnd));
+      seqC.push(G.pickTileType(c.rnd));
+    }
+    eq(seqA, seqC, 'deterministic RNG');
+    ok(seqA.some(function (t) { return t !== seqA[0]; }), 'the stream is not constant');
+  });
+
+  /* ---------------------------------------------------------- summary -- */
+
+  var passed = results.filter(function (r) { return r.ok; }).length;
+  var total = results.length;
+  var list = document.getElementById('results');
+  results.forEach(function (r) {
+    var li = document.createElement('li');
+    li.className = r.ok ? 'ok' : 'bad';
+    li.textContent = r.name;
+    if (!r.ok) {
+      var d = document.createElement('span');
+      d.className = 'detail';
+      d.textContent = r.detail || '';
+      li.appendChild(d);
+    }
+    list.appendChild(li);
+  });
+  var sum = document.getElementById('summary');
+  sum.className = passed === total ? 'pass' : 'fail';
+  sum.textContent = passed === total
+    ? 'כל ' + total + ' הבדיקות עברו בהצלחה'
+    : (total - passed) + ' מתוך ' + total + ' בדיקות נכשלו';
+  console.log('%c' + passed + '/' + total + ' tests passed', 'font-weight:bold');
+})();
+</script>
+</body>
+</html>

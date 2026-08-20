@@ -1,0 +1,174 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1">
+<title>סלייד-א-לאמה</title>
+<meta name="description" content="סלייד-א-לאמה — שחזור של משחק הלאמות האגדי מ-ICQ. דו-קרב התאמות על לוח 5×5.">
+<meta name="theme-color" content="#241038">
+<meta name="color-scheme" content="dark">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="סלייד-א-לאמה">
+<link rel="manifest" href="manifest.json">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<div id="app">
+
+  <!-- ============================================================ landing -->
+  <section class="screen screen-landing is-active" id="screen-landing">
+    <div class="landing-inner">
+      <div class="landing-badge" id="landing-mark" aria-hidden="true"></div>
+      <h1 class="logo">
+        <span class="logo-top">סלייד</span><span class="logo-dash">־</span><span class="logo-bottom">א־לאמה</span>
+      </h1>
+      <p class="tagline">דו־קרב אריחים במקדש האנדים</p>
+      <button class="btn btn-primary btn-xl" id="btn-start" type="button">כניסה למקדש</button>
+      <p class="landing-note">שחזור נאמן למשחק הלאמות מ־ICQ</p>
+    </div>
+  </section>
+
+  <!-- =============================================================== menu -->
+  <section class="screen screen-menu" id="screen-menu">
+    <button class="icon-btn icon-btn-float" id="btn-mute-menu" type="button" aria-label="השתקה"></button>
+
+    <header class="menu-head">
+      <h2 class="menu-title">בחרו מצב משחק</h2>
+    </header>
+
+    <div class="menu-cards">
+      <button class="mode-card" id="btn-mode-ai" type="button">
+        <span class="mode-card-art" data-art="ai" aria-hidden="true"></span>
+        <span class="mode-card-body">
+          <span class="mode-card-title">נגד המחשב</span>
+          <span class="mode-card-sub">לאמה אחת מולכם — בשלוש רמות קושי</span>
+          <span class="mode-card-stats" id="stats-ai">—</span>
+        </span>
+      </button>
+
+      <div class="difficulty" id="difficulty" role="group" aria-label="רמת קושי">
+        <span class="difficulty-label">רמת קושי</span>
+        <div class="seg">
+          <button class="seg-btn" type="button" data-diff="easy">קל</button>
+          <button class="seg-btn" type="button" data-diff="medium">בינוני</button>
+          <button class="seg-btn" type="button" data-diff="hard">קשה</button>
+        </div>
+      </div>
+
+      <button class="mode-card" id="btn-mode-hotseat" type="button">
+        <span class="mode-card-art" data-art="duo" aria-hidden="true"></span>
+        <span class="mode-card-body">
+          <span class="mode-card-title">שני שחקנים</span>
+          <span class="mode-card-sub">על אותו מכשיר, תור אחרי תור</span>
+          <span class="mode-card-stats" id="stats-hotseat">—</span>
+        </span>
+      </button>
+    </div>
+
+    <div class="menu-foot">
+      <button class="btn btn-ghost" id="btn-help" type="button">איך משחקים?</button>
+    </div>
+  </section>
+
+  <!-- =============================================================== game -->
+  <section class="screen screen-game" id="screen-game">
+
+    <header class="game-head">
+      <div class="head-side">
+        <button class="icon-btn" id="btn-home" type="button" aria-label="תפריט ראשי"></button>
+        <button class="icon-btn" id="btn-restart" type="button" aria-label="משחק חדש"></button>
+      </div>
+      <div class="head-turncount"><span id="turn-count">1</span><small>תור</small></div>
+      <div class="head-side head-side-end">
+        <button class="icon-btn" id="btn-mute" type="button" aria-label="השתקה"></button>
+      </div>
+    </header>
+
+    <!-- lama bench -->
+    <div class="bench" id="bench" dir="ltr">
+      <div class="bench-plank" aria-hidden="true"></div>
+      <div class="bench-divider" aria-hidden="true"></div>
+      <div class="bench-lamas" id="lamas"></div>
+    </div>
+
+    <!-- score panels -->
+    <div class="panels" dir="ltr">
+      <div class="panel panel-p1" id="panel-0" dir="rtl">
+        <div class="panel-name" id="name-0">שחקן 1</div>
+        <div class="panel-score" id="score-0">0</div>
+        <div class="panel-lamas"><span id="lamacount-0">5</span> לאמות</div>
+      </div>
+      <div class="panel panel-p2" id="panel-1" dir="rtl">
+        <div class="panel-name" id="name-1">שחקן 2</div>
+        <div class="panel-score" id="score-1">0</div>
+        <div class="panel-lamas"><span id="lamacount-1">5</span> לאמות</div>
+      </div>
+    </div>
+
+    <!-- turn strip + next tile -->
+    <div class="turnbar">
+      <div class="turnbar-text" id="turn-text">תור שלך</div>
+      <div class="nexttile">
+        <span class="nexttile-label">האריח הבא</span>
+        <div class="nexttile-slot" id="next-tile"></div>
+      </div>
+    </div>
+
+    <!-- board and its 15 entry arrows -->
+    <div class="stage" dir="ltr">
+      <div class="arrows arrows-top" id="arrows-top"></div>
+      <div class="board-mid">
+        <div class="arrows arrows-side" id="arrows-left"></div>
+        <div class="frame">
+          <div class="board" id="board">
+            <div class="cells" id="cells"></div>
+            <div class="tiles" id="tiles"></div>
+            <div class="fx" id="fx"></div>
+          </div>
+        </div>
+        <div class="arrows arrows-side" id="arrows-right"></div>
+      </div>
+    </div>
+
+    <p class="hint" id="hint">בחרו חץ כדי להחליק את האריח פנימה</p>
+  </section>
+
+  <!-- ================================================================ end -->
+  <section class="screen screen-end" id="screen-end">
+    <canvas class="confetti" id="confetti" aria-hidden="true"></canvas>
+    <div class="end-card">
+      <div class="end-trophy" id="end-trophy" aria-hidden="true"></div>
+      <h2 class="end-title" id="end-title">ניצחון!</h2>
+      <p class="end-sub" id="end-sub"></p>
+      <div class="end-scores" dir="ltr">
+        <div class="end-score" dir="rtl"><span class="end-score-name" id="end-name-0">שחקן 1</span><span class="end-score-val" id="end-score-0">0</span><span class="end-score-lamas" id="end-lamas-0">5 לאמות</span></div>
+        <div class="end-score" dir="rtl"><span class="end-score-name" id="end-name-1">שחקן 2</span><span class="end-score-val" id="end-score-1">0</span><span class="end-score-lamas" id="end-lamas-1">5 לאמות</span></div>
+      </div>
+      <div class="end-actions">
+        <button class="btn btn-primary" id="btn-again" type="button">שחק שוב</button>
+        <button class="btn btn-ghost" id="btn-tomenu" type="button">תפריט</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================================================== modal -->
+  <div class="modal" id="modal" hidden>
+    <div class="modal-backdrop" id="modal-backdrop"></div>
+    <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+      <h3 class="modal-title" id="modal-title">כותרת</h3>
+      <div class="modal-body" id="modal-body"></div>
+      <div class="modal-actions" id="modal-actions"></div>
+    </div>
+  </div>
+
+</div>
+
+<script src="js/game.js"></script>
+<script src="js/audio.js"></script>
+<script src="js/ai.js"></script>
+<script src="js/ui.js"></script>
+</body>
+</html>
